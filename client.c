@@ -29,6 +29,8 @@ struct client
 	ev_timer wev_timeout;
 
 	ev_tstamp ts;
+
+	unsigned to_send;
 };
 
 double times_sum;
@@ -47,6 +49,8 @@ int client_send(client_t *c);
 void wcb_timeout(EV_P_ ev_timer *w, int tev)
 {
 	client_t *c = aux_memberof(client_t, wev_timeout, w);
+
+	c->to_send++;
 
 	ev_io_start(loop, &c->wev_send);
 
@@ -72,6 +76,8 @@ void wcb_connect(EV_P_ ev_io *w, int tev)
 	if (0 > rc) return;
 #endif
 
+	c->to_send = 1;
+
 	ev_io_stop(loop, &c->wev_connect);
 	ev_io_start(loop, &c->wev_send);
 	ev_io_start(loop, &c->wev_recv);
@@ -81,8 +87,11 @@ void wcb_send(EV_P_ ev_io *w, int tev)
 {
 	client_t *c = aux_memberof(client_t, wev_send, w);
 
-	int rc = client_send(c);
-	if (0 > rc) return;
+	for (; c->to_send; c->to_send--)
+	{
+		int rc = client_send(c);
+		if (0 > rc) return;
+	}
 
 	ev_io_stop(loop, &c->wev_send);
 }
@@ -111,7 +120,7 @@ void wcb_recv(EV_P_ ev_io *w, int tev)
 			return;
 		}
 
-		fprintf(stderr, "recv error fd=%d\n", w->fd);
+		fprintf(stderr, "recv error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno));
 		client_del(c);
 		return;
 	}
