@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <ev.h>
@@ -6,7 +7,7 @@
 
 #define SILENT_TIMEOUT 0.001
 #define MAX_CLIENTS 10000
-#define RESEND_INTERVAL 1.0
+#define RESEND_INTERVAL 0.01
 #define EXECUTION_TIME 60.0
 
 /* --- */
@@ -23,7 +24,7 @@ typedef struct client
 struct client
 {
 	ev_io wev_recv;
-	/* ev_io wev_send; */
+	ev_io wev_send;
 	ev_io wev_connect;
 	ev_timer wev_timeout;
 
@@ -47,8 +48,12 @@ void wcb_timeout(EV_P_ ev_timer *w, int tev)
 {
 	client_t *c = aux_memberof(client_t, wev_timeout, w);
 
+	ev_io_start(loop, &c->wev_send);
+
+#if 0
 	int rc = client_send(c);
 	if (0 > rc) return;
+#endif
 }
 
 void wcb_connect(EV_P_ ev_io *w, int tev)
@@ -62,11 +67,24 @@ void wcb_connect(EV_P_ ev_io *w, int tev)
 		return;
 	}
 
+#if 0
+	int rc = client_send(c);
+	if (0 > rc) return;
+#endif
+
+	ev_io_stop(loop, &c->wev_connect);
+	ev_io_start(loop, &c->wev_send);
+	ev_io_start(loop, &c->wev_recv);
+}
+
+void wcb_send(EV_P_ ev_io *w, int tev)
+{
+	client_t *c = aux_memberof(client_t, wev_send, w);
+
 	int rc = client_send(c);
 	if (0 > rc) return;
 
-	ev_io_stop(loop, &c->wev_connect);
-	ev_io_start(loop, &c->wev_recv);
+	ev_io_stop(loop, &c->wev_send);
 }
 
 void wcb_recv(EV_P_ ev_io *w, int tev)
@@ -83,7 +101,7 @@ void wcb_recv(EV_P_ ev_io *w, int tev)
 	if (times_max < time) times_max = time;
 	if (times_min > time) times_min = time;
 
-	/* fprintf(stderr, "recv fd=%d %f (%d bytes)\n", w->fd, ev_now(loop) - c->ts, nb); */
+	/* fprintf(stderr, "recv fd=%d %f (%d bytes) %.*s\n", w->fd, ev_now(loop) - c->ts, nb, nb, buf); */
 	/* if (nb != 57) fprintf(stderr, "recv error %d bytes\n", nb); */
 
 	if (0 > nb)
@@ -109,7 +127,7 @@ int client_send(client_t *c)
 
 	if (0 > nb)
 	{
-		fprintf(stderr, "send error fd=%d\n", c->wev_recv.fd);
+		fprintf(stderr, "send error fd=%d (%d: %s)\n", c->wev_recv.fd, errno, strerror(errno));
 		client_del(c);
 		return -1;
 	}
@@ -150,7 +168,7 @@ int client_add()
 	}
 
 	ev_io_init(&c->wev_recv, wcb_recv, sd, EV_READ);
-	/* ev_io_init(&c->wev_send, wcb_send, sd, EV_WRITE); */
+	ev_io_init(&c->wev_send, wcb_send, sd, EV_WRITE);
 	ev_io_init(&c->wev_connect, wcb_connect, sd, EV_READ | EV_WRITE);
 	ev_timer_init(&c->wev_timeout, wcb_timeout, 0, RESEND_INTERVAL);
 	ev_timer_again(loop, &c->wev_timeout);
@@ -162,7 +180,7 @@ int client_add()
 int client_del(client_t *c)
 {
 	ev_io_stop(loop, &c->wev_recv);
-	/* ev_io_stop(loop, &c->wev_send); */
+	ev_io_stop(loop, &c->wev_send);
 	ev_io_stop(loop, &c->wev_connect);
 	ev_timer_stop(loop, &c->wev_timeout);
 

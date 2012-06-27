@@ -74,7 +74,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 	echo_client_t *c = aux_memberof(echo_client_t, wev_recv, w);
 
 	nb = aux_unix_recv(w->fd, buf, 4096);
-	/* fprintf(stderr, "recv %d bytes (%d: %s)\n", nb, errno, strerror(errno)); */
+	/* fprintf(stderr, "recv %d bytes (%d: %s) %.*s\n", nb, errno, strerror(errno), nb, buf); */
 
 	if (0 >= nb)
 	{
@@ -99,6 +99,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 	if (0 > nb)
 	{
+		/* fprintf(stderr, "send error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno)); */
 		echo_client_del(c);
 		return;
 	}
