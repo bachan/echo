@@ -188,6 +188,8 @@ int client_add()
 
 int client_del(client_t *c)
 {
+fprintf(stderr, "del client to_send=%d\n", c->to_send);
+
 	ev_io_stop(loop, &c->wev_recv);
 	ev_io_stop(loop, &c->wev_send);
 	ev_io_stop(loop, &c->wev_connect);

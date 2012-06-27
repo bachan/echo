@@ -2,6 +2,7 @@
 #define __HEADER_H__
 
 #include <errno.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
 

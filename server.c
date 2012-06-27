@@ -8,7 +8,7 @@
 #include "header.h"
 
 #define LISTEN_BACKLOG 4096
-#define SOCKET_TIMEOUT 10.0
+#define SOCKET_TIMEOUT 60.0
 
 struct ev_loop *loop;
 
@@ -76,7 +76,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 	nb = aux_unix_recv(w->fd, buf, 4096);
 	/* fprintf(stderr, "recv %d bytes (%d: %s) %.*s\n", nb, errno, strerror(errno), nb, buf); */
 
-	if (0 >= nb)
+	if (0 > nb)
 	{
 		if (EAGAIN == errno)
 		{
@@ -84,6 +84,14 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 			return;
 		}
 
+		fprintf(stderr, "recv error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno));
+		echo_client_del(c);
+		return;
+	}
+
+	if (0 == nb)
+	{
+		fprintf(stderr, "recv done fd=%d\n", w->fd);
 		echo_client_del(c);
 		return;
 	}
@@ -99,7 +107,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 	if (0 > nb)
 	{
-		/* fprintf(stderr, "send error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno)); */
+		fprintf(stderr, "send error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno));
 		echo_client_del(c);
 		return;
 	}
@@ -111,8 +119,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 int echo_client_add(echo_server_t *s, int sd, struct sockaddr_in *addr)
 {
-	echo_client_t *c = calloc(1, sizeof(*c));
-
+	echo_client_t *c = malloc(sizeof(*c));
 	if (NULL == c) return -1;
 
 	c->addr.sin_family = addr->sin_family;
