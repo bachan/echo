@@ -208,16 +208,19 @@ int main(int argc, char **argv)
 
 	/* --- */
 
-	int rc;
+	int rc, i;
 
-	pthread_t thread_id;
-
-	rc = pthread_create(&thread_id, NULL, thread_func, (void *) sd);
-
-	if (0 != rc)
+	for (i = 0; i < 7; ++i)
 	{
-		fprintf(stderr, "thread create error %d\n", rc);
-		return -1;
+		pthread_t thread_id;
+
+		rc = pthread_create(&thread_id, NULL, thread_func, (void *) sd);
+
+		if (0 != rc)
+		{
+			fprintf(stderr, "thread create error %d\n", rc);
+			return -1;
+		}
 	}
 
 	thread_func((void *) sd);
