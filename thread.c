@@ -4,6 +4,7 @@
 #include <netinet/in.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <unistd.h>
 #include <ev.h>
 #include <pthread.h>
 #include "header.h"
@@ -208,9 +209,12 @@ int main(int argc, char **argv)
 
 	/* --- */
 
+	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+	fprintf(stderr, "found %d cores\n", num_cores);
+
 	int rc, i;
 
-	for (i = 0; i < 7; ++i)
+	for (i = 0; i < num_cores - 1; ++i)
 	{
 		pthread_t thread_id;
 
