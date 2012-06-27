@@ -135,7 +135,7 @@ pthread_mutex_lock(&accept_mtx);
 	sd = accept(w->fd, (struct sockaddr *) &addr, &addrlen);
 pthread_mutex_unlock(&accept_mtx);
 
-fprintf(stderr, "accept in thread=%d fd=%d (%d: %s)\n", (int) pthread_self(), sd, errno, strerror(errno));
+/* fprintf(stderr, "accept in thread=%d fd=%d (%d: %s)\n", (int) pthread_self(), sd, errno, strerror(errno)); */
 
 	if (0 > sd)
 	{
