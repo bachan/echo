@@ -179,7 +179,7 @@ int echo_socket_listen(const char *host, const char *port)
 
 void *thread_func(void *arg)
 {
-	int sd = (int) arg;
+	long sd = (long) arg;
 
 	loop = ev_loop_new(0);
 
@@ -195,7 +195,7 @@ void *thread_func(void *arg)
 
 int main(int argc, char **argv)
 {
-	int sd;
+	long sd;
 
 	if (3 > argc)
 	{
