@@ -92,13 +92,13 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 	if (rem_size < 32)
 	{
-		fprintf(stderr, "rem_size=%d, c->to_send_size=%u, fd=%d\n", rem_size, (unsigned) c->to_send_size, w->fd);
+		/* fprintf(stderr, "rem_size=%d, c->to_send_size=%u, fd=%d\n", rem_size, (unsigned) c->to_send_size, w->fd); */
 		memcpy(c->to_send, c->to_send_beg, c->to_send_size);
 
 		c->to_send_beg = c->to_send;
 		rem_size = TO_SEND_SIZE - c->to_send_size;
 
-		fprintf(stderr, "rem_size=%d\n", rem_size);
+		/* fprintf(stderr, "rem_size=%d\n", rem_size); */
 	}
 
 	nb = aux_unix_recv(w->fd, c->to_send_beg + c->to_send_size, rem_size);
@@ -119,8 +119,8 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 	if (0 == nb)
 	{
-		fprintf(stderr, "recv done fd=%d\n", w->fd);
-		echo_client_del(c);
+		/* fprintf(stderr, "recv done fd=%d\n", w->fd); */
+		/* echo_client_del(c); */
 		return;
 	}
 
