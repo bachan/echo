@@ -2,6 +2,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <unistd.h>
@@ -219,9 +220,9 @@ void echo_server_wcb_accept(EV_P_ ev_io *w, int tev)
 
 	addrlen = sizeof(addr);
 
-pthread_mutex_lock(&accept_mtx);
+	pthread_mutex_lock(&accept_mtx);
 	sd = accept(w->fd, (struct sockaddr *) &addr, &addrlen);
-pthread_mutex_unlock(&accept_mtx);
+	pthread_mutex_unlock(&accept_mtx);
 
 /* fprintf(stderr, "accept in thread=%d fd=%d (%d: %s)\n", (int) pthread_self(), sd, errno, strerror(errno)); */
 
@@ -234,6 +235,13 @@ pthread_mutex_unlock(&accept_mtx);
 	{
 		return;
 	}
+
+#if 0
+	if (0 > (rc = aux_set_sckopt(sd, IPPROTO_TCP, TCP_NODELAY, 1)))
+	{
+		fprintf(stderr, "sockopt TCP_NODELAY error\n");
+	}
+#endif
 
 	echo_client_add(s, sd, &addr);
 }
