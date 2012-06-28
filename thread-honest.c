@@ -304,7 +304,7 @@ int main(int argc, char **argv)
 
 	/* --- */
 
-	int num_cores = sysconf(_SC_NPROCESSORS_ONLN);
+	int num_cores = (4 == argc) ? atoi(argv[3]) : sysconf(_SC_NPROCESSORS_ONLN);
 	fprintf(stderr, "found %d cores\n", num_cores);
 
 	int rc, i;
