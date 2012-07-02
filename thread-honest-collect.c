@@ -272,6 +272,7 @@ void *thread_func(void *arg)
 	long sd = (long) arg;
 
 	loop = ev_loop_new(0);
+	ev_set_io_collect_interval(loop, 0.02);
 
 	echo_server_t s;
 
