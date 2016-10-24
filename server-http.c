@@ -44,8 +44,8 @@ void echo_client_wcb_timeout(EV_P_ ev_timer *w, int tev)
 	echo_client_del(c);
 }
 
-#define OUTPUT "HTTP/1.0 200 OK\r\n" \
-	"Connection: close\r\n\r\n"
+#define OUTPUT "HTTP/1.1 404 Not Found\r\n" \
+	"Content-Type: text/plain; charset=utf-8\r\n\r\n"
 
 void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 {
@@ -86,7 +86,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 		return;
 	}
 
-	ev_timer_again(loop, &c->wev_timeout);
+	echo_client_del(c);
 }
 
 int echo_client_add(echo_server_t *s, int sd, struct sockaddr_in *addr)
@@ -128,6 +128,7 @@ void echo_server_wcb_accept(EV_P_ ev_io *w, int tev)
 
 	if (EV_ERROR & tev)
 	{
+		/* echo_server_enough(s); */
 		return;
 	}
 
