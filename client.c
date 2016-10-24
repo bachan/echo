@@ -2,6 +2,7 @@
 #include <string.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <unistd.h>
 #include <ev.h>
 #include "header.h"
 

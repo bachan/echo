@@ -30,13 +30,7 @@ struct echo_client
 	struct sockaddr_in addr;
 
 	ev_io wev_recv;
-	ev_io wev_send;
 	ev_timer wev_timeout;
-
-#define TO_SEND_SIZE 4096 * 4
-	char to_send [TO_SEND_SIZE];
-	char *to_send_beg;
-	size_t to_send_size;
 };
 
 int echo_client_add(echo_server_t *s, int sd, struct sockaddr_in *addr);
@@ -50,63 +44,16 @@ void echo_client_wcb_timeout(EV_P_ ev_timer *w, int tev)
 	echo_client_del(c);
 }
 
-#if 0
-#define OUTPUT "HTTP/1.1 200 OK\r\n" \
-	"Content-Length: 0\r\n" \
+#define OUTPUT "HTTP/1.0 200 OK\r\n" \
 	"Connection: close\r\n\r\n"
-#endif
-
-void echo_client_wcb_send(EV_P_ ev_io *w, int tev)
-{
-	int sent_nb;
-	echo_client_t *c = aux_memberof(echo_client_t, wev_send, w);
-
-	sent_nb = aux_unix_send(w->fd, c->to_send_beg, c->to_send_size);
-	/* sent_nb = aux_unix_send(w->fd, OUTPUT, sizeof(OUTPUT) - 1); */
-	/* fprintf(stderr, "sent %d bytes (%d: %s)\n", sent_nb, errno, strerror(errno)); */
-
-	if (0 > sent_nb)
-	{
-		if (EAGAIN == errno)
-		{
-			return;
-		}
-
-		fprintf(stderr, "send error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno));
-		echo_client_del(c);
-		return;
-	}
-
-	c->to_send_beg += sent_nb;
-	c->to_send_size -= sent_nb;
-
-	if (c->to_send_size > 0)
-	{
-		return;
-	}
-
-	ev_io_stop(loop, &c->wev_send);
-}
 
 void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 {
 	int nb;
+	char buf [4096];
 	echo_client_t *c = aux_memberof(echo_client_t, wev_recv, w);
 
-	int rem_size = c->to_send + TO_SEND_SIZE - (c->to_send_beg + c->to_send_size);
-
-	if (rem_size < 32)
-	{
-		/* fprintf(stderr, "rem_size=%d, c->to_send_size=%u, fd=%d\n", rem_size, (unsigned) c->to_send_size, w->fd); */
-		memcpy(c->to_send, c->to_send_beg, c->to_send_size);
-
-		c->to_send_beg = c->to_send;
-		rem_size = TO_SEND_SIZE - c->to_send_size;
-
-		/* fprintf(stderr, "rem_size=%d\n", rem_size); */
-	}
-
-	nb = aux_unix_recv(w->fd, c->to_send_beg + c->to_send_size, rem_size);
+	nb = aux_unix_recv(w->fd, buf, 4096);
 	/* fprintf(stderr, "recv %d bytes (%d: %s) %.*s\n", nb, errno, strerror(errno), nb, buf); */
 
 	if (0 > nb)
@@ -124,52 +71,12 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 
 	if (0 == nb)
 	{
-		/* fprintf(stderr, "recv done fd=%d\n", w->fd); */
-		/* echo_client_del(c); */
+		fprintf(stderr, "recv done fd=%d\n", w->fd);
+		echo_client_del(c);
 		return;
 	}
 
-	c->to_send_size += nb;
-
-#if 0
-	ev_io_stop(loop, &c->wev_recv);
-	ev_io_start(loop, &c->wev_send);
-#endif
-
-	int sent_nb;
-
-	/* if (c->to_send_size > 0) */
-	{
-		sent_nb = aux_unix_send(w->fd, c->to_send_beg, c->to_send_size);
-		/* nb = aux_unix_send(w->fd, OUTPUT, sizeof(OUTPUT) - 1); */
-		/* fprintf(stderr, "sent %d bytes (%d: %s)\n", nb, errno, strerror(errno)); */
-
-		if (0 > sent_nb)
-		{
-			if (EAGAIN == errno)
-			{
-				ev_io_start(loop, &c->wev_send);
-				return;
-			}
-
-			fprintf(stderr, "send error fd=%d (%d: %s)\n", w->fd, errno, strerror(errno));
-			echo_client_del(c);
-			return;
-		}
-
-		c->to_send_beg += sent_nb;
-		c->to_send_size -= sent_nb;
-
-		if (c->to_send_size > 0)
-		{
-			ev_io_start(loop, &c->wev_send);
-			return;
-		}
-	}
-
-#if 0
-	nb = aux_unix_send(w->fd, buf, nb);
-	/* nb = aux_unix_send(w->fd, OUTPUT, sizeof(OUTPUT) - 1); */
+	nb = aux_unix_send(w->fd, OUTPUT, sizeof(OUTPUT) - 1);
 	/* fprintf(stderr, "sent %d bytes (%d: %s)\n", nb, errno, strerror(errno)); */
 
 	if (0 > nb)
@@ -179,10 +86,7 @@ void echo_client_wcb_recv(EV_P_ ev_io *w, int tev)
 		return;
 	}
 
-	/* echo_client_del(c); */
-
 	ev_timer_again(loop, &c->wev_timeout);
-#endif
 }
 
 int echo_client_add(echo_server_t *s, int sd, struct sockaddr_in *addr)
@@ -195,23 +99,16 @@ int echo_client_add(echo_server_t *s, int sd, struct sockaddr_in *addr)
 	c->addr.sin_port = addr->sin_port;
 
 	ev_io_init(&c->wev_recv, echo_client_wcb_recv, sd, EV_READ);
-	ev_io_init(&c->wev_send, echo_client_wcb_send, sd, EV_WRITE);
 	ev_timer_init(&c->wev_timeout, echo_client_wcb_timeout, 0, SOCKET_TIMEOUT);
 	ev_timer_again(loop, &c->wev_timeout);
 	ev_io_start(loop, &c->wev_recv);
-
-	c->to_send_beg = c->to_send;
-	c->to_send_size = 0;
 
 	return 0;
 }
 
 int echo_client_del(echo_client_t *c)
 {
-fprintf(stderr, "client del\n");
-
 	ev_io_stop(loop, &c->wev_recv);
-	ev_io_stop(loop, &c->wev_send);
 	ev_timer_stop(loop, &c->wev_timeout);
 
 	close(c->wev_recv.fd);
@@ -228,6 +125,11 @@ void echo_server_wcb_accept(EV_P_ ev_io *w, int tev)
 	socklen_t addrlen;
 
 	echo_server_t *s = aux_memberof(echo_server_t, wev_accept, w);
+
+	if (EV_ERROR & tev)
+	{
+		return;
+	}
 
 	addrlen = sizeof(addr);
 
@@ -286,7 +188,6 @@ int main(int argc, char **argv)
 	}
 
 	loop = ev_default_loop(0);
-	ev_set_io_collect_interval(loop, 0.02);
 
 	echo_server_t s;
 

@@ -3,6 +3,7 @@
 gcc -O3 -march=native -mtune=native server.c -lev -o server
 gcc -O3 -march=native -mtune=native server-honest.c -lev -o server-honest
 gcc -O3 -march=native -mtune=native server-honest-collect.c -lev -o server-honest-collect
+gcc -O3 -march=native -mtune=native server-http.c -lev -o server-http
 
 gcc -O3 -march=native -mtune=native client.c -lev -o client
 
